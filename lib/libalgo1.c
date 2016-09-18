@@ -13,8 +13,3 @@ int setup(int val)
 
 }
 
-int get_version(void)
-{
-	return __IMAGINE_API_VERSION;
-
-}

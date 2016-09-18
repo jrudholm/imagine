@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <string.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #include "imagine_api.h"
 #include "common.h"
@@ -34,6 +36,7 @@ static void *open_lib(char *path)
 	void *handle;
 	int ret;
 	get_version_t get_version;
+	int my_version = __get_version();
 
 	handle = dlopen(path, RTLD_LAZY);
 	if (!handle) {
@@ -43,16 +46,16 @@ static void *open_lib(char *path)
 	dlerror();
 
 	/* Check API version */
-	get_version = get_lib_function(handle, "get_version");
+	get_version = get_lib_function(handle, "__get_version");
 	if (!get_version)
 		goto err;
 
 	ret = get_version();
 	verbose("%s: API version %d\n", path, ret);
 
-	if (ret != __IMAGINE_API_VERSION) {
+	if (ret != my_version) {
 		error("Error when loading %s: API version mismatch (%d != %d)\n",
-				path, __IMAGINE_API_VERSION, ret);
+				path, my_version, ret);
 		goto err;
 	}
 
@@ -96,6 +99,11 @@ void parse_opts(int argc, char **argv)
 int main(int argc, char **argv)
 {
 	void *handle;
+	run_t run;
+	stop_t stop;
+	int ret = 0;
+	void *retval;
+	pthread_t thread;
 
 	parse_opts(argc, argv);
 
@@ -105,10 +113,35 @@ int main(int argc, char **argv)
 	}
 
 	handle = open_lib(opts.file);
-	if (handle) {
-		close_lib(handle);
-		exit(0);
+	if (!handle)
+		exit(1);
+
+	run = get_lib_function(handle, "run");
+	if (!run) {
+		ret = 1;
+		goto out;
 	}
 
-	exit(1);
+	stop = get_lib_function(handle, "stop");
+	if (!stop) {
+		ret = 1;
+		goto out;
+	}
+
+	/* Call the run function from a thread */
+	verbose("Calling run\n");
+	pthread_create(&thread, NULL, run, NULL);
+
+	verbose("Sleeping until Enter\n");
+
+	getc(stdin);
+
+	verbose("Stopping thread\n");
+	stop();
+
+	pthread_join(thread, &retval);
+
+ out:
+	close_lib(handle);
+	exit(ret);
 }
