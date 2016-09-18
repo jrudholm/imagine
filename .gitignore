@@ -1,0 +1,4 @@
+imagine
+*.o
+lib/*.o
+lib/*.so
