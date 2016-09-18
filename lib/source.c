@@ -15,10 +15,10 @@ void *run(void *data)
 	int i = 0;
 
 	while (!stop_running) {
-		sleep(1);
 		printf("%d ", i);
-		fflush(NULL);
+		fflush(stdout);
 		i++;
+		sleep(1);
 	}
 
 	return NULL;

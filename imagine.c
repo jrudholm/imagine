@@ -96,52 +96,67 @@ void parse_opts(int argc, char **argv)
 	}
 }
 
+#define SOURCE "lib/source.so"
+#define ALGO "lib/libalgo1.so"
+
 int main(int argc, char **argv)
 {
-	void *handle;
-	run_t run;
-	stop_t stop;
+	void *algo_handle = NULL;
+	void *source_handle = NULL;
+	run_t source_run;
+	stop_t source_stop;
+	setup_t algo_setup;
 	int ret = 0;
 	void *retval;
 	pthread_t thread;
 
 	parse_opts(argc, argv);
 
-	if (!opts.file) {
-		error("No file to load\n");
-		exit(1);
-	}
-
-	handle = open_lib(opts.file);
-	if (!handle)
+	/* Open source lib */
+	source_handle = open_lib(SOURCE);
+	if (!source_handle)
 		exit(1);
 
-	run = get_lib_function(handle, "run");
-	if (!run) {
+	source_run = get_lib_function(source_handle, "run");
+	if (!source_run) {
 		ret = 1;
 		goto out;
 	}
 
-	stop = get_lib_function(handle, "stop");
-	if (!stop) {
+	source_stop = get_lib_function(source_handle, "stop");
+	if (!source_stop) {
 		ret = 1;
 		goto out;
 	}
+
+	/* Open algo lib */
+	algo_handle = open_lib(ALGO);
+	if (!algo_handle)
+		exit(1);
+
+	algo_setup = get_lib_function(algo_handle, "setup");
+	if (!algo_setup) {
+		ret = 1;
+		goto out;
+	}
+
+	algo_setup(5);
 
 	/* Call the run function from a thread */
 	verbose("Calling run\n");
-	pthread_create(&thread, NULL, run, NULL);
+	pthread_create(&thread, NULL, source_run, NULL);
 
 	verbose("Sleeping until Enter\n");
 
 	getc(stdin);
 
 	verbose("Stopping thread\n");
-	stop();
+	source_stop();
 
 	pthread_join(thread, &retval);
 
  out:
-	close_lib(handle);
+	close_lib(source_handle);
+	close_lib(algo_handle);
 	exit(ret);
 }

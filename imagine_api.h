@@ -12,11 +12,12 @@ int __get_version(void)
 /* Common dynamic library interfaces */
 typedef int (*get_version_t)(void);
 
-
+/* Source functions */
 typedef void * (*run_t)(void *);
 typedef int (*setup_t)(int);
 typedef int (*stop_t)(void);
 
+/* Algo functions */
 
 /* Sensor backend functions */
 typedef int (*set_exp_lines_t)(int);
@@ -25,14 +26,8 @@ struct sensor_ops {
 	set_exp_lines_t set_exp_lines;
 };
 
-/* Driver bacekdn functions */
+/* Driver backend functions */
 typedef int (*get_stat_t)(int);
-
-
-struct want {
-	int what;
-	char *when;
-};
 
 
 #endif
